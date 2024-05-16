@@ -32,10 +32,14 @@ public class ContactWebHookService {
     @Autowired
     Environment env;
 
-    public Response createContactWebHook(CreateContactWebHookRequest createContactWebHookRequest) throws IOException {
+    public Response createContactWebHook(ArrayList <CreateContactWebHookRequest> createContactWebHookRequestArrayList) throws IOException {
+        CreateContactWebHookRequest createContactWebHookRequest=createContactWebHookRequestArrayList.get(0);
         Response response = new Response();
+
+
         String[] message=new String[2];
         try {
+            System.out.printf("CRequest Payload : " + createContactWebHookRequest);
             URI uri = new URI(Objects.requireNonNull(env.getProperty("CreateContactWebHookURL") + createContactWebHookRequest.getObjectId() + "?properties=email%2C%20phone%2C%20company%2C%20country%2C%20firstname%2C%20lastname%2C%20message%2C%20contact_business_type%2C%20archived=false"));
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
@@ -55,42 +59,43 @@ public class ContactWebHookService {
                 ArrayList<Claims> claimsList = new ArrayList<>();
                 Claims claims = new Claims();
                 claims.setUri("http://wso2.org/claims/givenname");
-                claims.setValue(getAccountByIdResponse.getProperties().getFirstname());
+                claims.setValue(getAccountByIdResponse.getProperties().getFirstname() != null ? getAccountByIdResponse.getProperties().getFirstname() : "");
                 claimsList.add(claims);
 
                 claims = new Claims();
                 claims.setUri("http://wso2.org/claims/lastname");
-                claims.setValue(getAccountByIdResponse.getProperties().getLastname());
+                claims.setValue(getAccountByIdResponse.getProperties().getLastname() != null ? getAccountByIdResponse.getProperties().getLastname() : "");
                 claimsList.add(claims);
 
                 claims = new Claims();
                 claims.setUri("http://wso2.org/claims/companyname");
-                claims.setValue(getAccountByIdResponse.getProperties().getCompany());
+                claims.setValue(getAccountByIdResponse.getProperties().getCompany() != null ? getAccountByIdResponse.getProperties().getCompany() : "");
                 claimsList.add(claims);
 
                 claims = new Claims();
                 claims.setUri("http://wso2.org/claims/emailaddress");
-                claims.setValue(getAccountByIdResponse.getProperties().getEmail());
+                claims.setValue(getAccountByIdResponse.getProperties().getEmail() != null ? getAccountByIdResponse.getProperties().getEmail() : "");
                 claimsList.add(claims);
 
                 claims = new Claims();
                 claims.setUri("http://wso2.org/claims/phoneNumbers");
-                claims.setValue(getAccountByIdResponse.getProperties().getPhone());
+                claims.setValue(getAccountByIdResponse.getProperties().getPhone() != null ? getAccountByIdResponse.getProperties().getPhone() : "");
                 claimsList.add(claims);
 
                 claims = new Claims();
                 claims.setUri("http://wso2.org/claims/country");
-                claims.setValue(getAccountByIdResponse.getProperties().getCountry());
+                claims.setValue(getAccountByIdResponse.getProperties().getCountry() != null ? getAccountByIdResponse.getProperties().getCountry() : "");
                 claimsList.add(claims);
 
                 claims = new Claims();
                 claims.setUri("http://wso2.org/claims/message");
-                claims.setValue(getAccountByIdResponse.getProperties().getMessage());
+                claims.setValue(getAccountByIdResponse.getProperties().getMessage() != null ? getAccountByIdResponse.getProperties().getMessage() : "");
                 claimsList.add(claims);
 
                 claims = new Claims();
                 claims.setUri("http://wso2.org/claims/businesstype");
-                claims.setValue(getAccountByIdResponse.getProperties().getContact_business_type());
+                claims.setValue(getAccountByIdResponse.getProperties().getContact_business_type() != null ? getAccountByIdResponse.getProperties().getContact_business_type() : "");
+                claimsList.add(claims);
 
                 claimsList.add(claims);
                 user.setClaims(claimsList);
@@ -101,18 +106,29 @@ public class ContactWebHookService {
                 headers.setContentType(MediaType.APPLICATION_JSON);
                 headers.set("Authorization", env.getProperty("IDSAuthorizationToken"));
                 entity = new HttpEntity<>(body, headers);
-                responseEntity = restTemplate.exchange(uri, HttpMethod.POST, entity, Object.class);
-                if (responseEntity.getStatusCode().value() >= 200 && responseEntity.getStatusCode().value() < 300) {
-                    message=String.valueOf(responseEntity.getStatusCode()).split(" ");
-                    response.setCode(Integer.parseInt(message[0]));
-                    response.setMessage(message[1]);
-                } else {
-                    message=String.valueOf(responseEntity.getStatusCode()).split(" ");
-                    response.setCode(Integer.parseInt(message[0]));
-                    response.setMessage(message[1]);
-                    response.setData(responseEntity.getBody());
+                try{
+                    responseEntity = restTemplate.exchange(uri, HttpMethod.POST, entity, Object.class);
+                    if (responseEntity.getStatusCode().value() >= 200 && responseEntity.getStatusCode().value() < 300) {
+                        message=String.valueOf(responseEntity.getStatusCode()).split(" ");
+                        response.setCode(Integer.parseInt(message[0]));
+                        response.setMessage(message[1]);
+                    } else {
+                        message=String.valueOf(responseEntity.getStatusCode()).split(" ");
+                        response.setCode(Integer.parseInt(message[0]));
+                        response.setMessage(message[1]);
+                        response.setData(responseEntity.getBody());
+                    }
+                } catch (HttpClientErrorException | HttpServerErrorException ex) {
+                    HttpStatus statusCode = ex.getStatusCode();
+                    String responseBody = ex.getResponseBodyAsString();
+                    ErrorResponse errorResponse= Marshalling.jsonStringToObjectMapper(responseBody, ErrorResponse.class);
+                    response.setCode(statusCode.value());
+                    response.setMessage(errorResponse.getDescription());
+                    ex.printStackTrace();
+                    return response;
                 }
-            } else {
+            }
+            else {
                 message=String.valueOf(responseEntity.getStatusCode()).split(" ");
                 response.setCode(Integer.parseInt(message[0]));
                 response.setMessage(message[1]);
@@ -121,10 +137,8 @@ public class ContactWebHookService {
             return response;
         } catch (HttpClientErrorException | HttpServerErrorException ex) {
             HttpStatus statusCode = ex.getStatusCode();
-            String responseBody = ex.getResponseBodyAsString();
-            ErrorResponse errorResponse= Marshalling.jsonStringToObjectMapper(responseBody, ErrorResponse.class);
             response.setCode(statusCode.value());
-            response.setMessage(errorResponse.getDescription());
+            response.setMessage(String.valueOf(statusCode));
             ex.printStackTrace();
             return response;
         } catch (Exception e) {

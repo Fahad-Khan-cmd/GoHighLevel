@@ -91,4 +91,21 @@ public class CreateContactWebHookRequest {
     public void setChangeFlag(String changeFlag) {
         this.changeFlag = changeFlag;
     }
+
+
+    @Override
+    public String toString() {
+        return "{" +
+                "appId=" + appId +
+                ", eventId=" + eventId +
+                ", subscriptionId=" + subscriptionId +
+                ", portalId=" + portalId +
+                ", occurredAt=" + occurredAt +
+                ", subscriptionType='" + subscriptionType + '\'' +
+                ", attemptNumber=" + attemptNumber +
+                ", objectId=" + objectId +
+                ", changeSource='" + changeSource + '\'' +
+                ", changeFlag='" + changeFlag + '\'' +
+                '}';
+    }
 }

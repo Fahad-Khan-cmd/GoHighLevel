@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Map;
 
 @RestController
@@ -26,10 +27,10 @@ public class ContactWebHookController {
 
 
     @PostMapping("/CreateContactWebHook")
-    public ResponseEntity<?> processOrder(@RequestBody CreateContactWebHookRequest createContactWebHookRequest){
+    public ResponseEntity<?> processOrder(@RequestBody ArrayList <CreateContactWebHookRequest> createContactWebHookRequestArrayList){
         try {
             Response response=new Response();
-            response=contactWebHookService.createContactWebHook(createContactWebHookRequest);
+            response=contactWebHookService.createContactWebHook(createContactWebHookRequestArrayList);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
